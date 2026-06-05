@@ -1,0 +1,6 @@
+{
+  "name": "Chaitra Beauty Zone",
+  "description": "Modern dark-themed hair salon and beauty parlour website featuring an online appointment booking system, a premium video and filterable portfolio showcase, user reviews, tailoring services, and WhatsApp integration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

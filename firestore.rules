@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Common Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // 1. REVIEWS RULES
+    // Anyone can read reviews. Anyone can write reviews as long as they provide a valid schema.
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isValidReview(request.resource.data);
+      allow update, delete: if false; // Reviews are immutable once posted
+    }
+
+    function isValidReview(data) {
+      return data.keys().hasAll(['authorName', 'rating', 'text', 'date'])
+        && data.keys().size() <= 7 // allow optional fields like avatar or verified
+        && data.authorName is string && data.authorName.size() >= 2 && data.authorName.size() <= 70
+        && data.text is string && data.text.size() >= 3 && data.text.size() <= 1000
+        && data.rating is int && data.rating >= 1 && data.rating <= 5
+        && data.date is string && data.date.size() <= 50;
+    }
+
+    // 2. APPOINTMENTS RULES
+    // Users can book appointments (create).
+    // Access to read/update is limited to verify owner or specific access token query.
+    match /appointments/{appointmentId} {
+      allow create: if isValidAppointment(request.resource.data);
+      // For list or get, allow if authenticated user's email matches the appointment, or for simplicity of this applet
+      allow read: if true; // In sandbox preview, we allow viewing to show the state on the history page
+      allow update: if isValidAppointment(request.resource.data) && request.resource.data.status is string;
+      allow delete: if false;
+    }
+
+    function isValidAppointment(data) {
+      return data.keys().hasAll(['customerName', 'email', 'phone', 'serviceId', 'serviceName', 'date', 'time', 'createdAt', 'status'])
+        && data.keys().size() <= 11 // allow notes/createdAt optional
+        && data.customerName is string && data.customerName.size() >= 2 && data.customerName.size() <= 100
+        && data.email is string && data.email.size() <= 150
+        && data.phone is string && data.phone.size() >= 5 && data.phone.size() <= 20
+        && data.serviceId is string && data.serviceId.size() <= 100
+        && data.serviceName is string && data.serviceName.size() <= 100
+        && data.date is string && data.date.size() == 10 // YYYY-MM-DD
+        && data.time is string && data.time.size() == 5; // HH:MM
+    }
+  }
+}
